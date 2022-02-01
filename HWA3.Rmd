@@ -205,6 +205,11 @@ pseudo-R-squared statistic (note this is just one of many possible)
 pseudo_r2 = function(glm_mod) {
                 1 -  glm_mod$deviance / glm_mod$null.deviance
             }
+pseudo_r2(acer_poi)
+pseudo_r2(abies_poi)
+
+# explains variance in functions
+
 ```
 
 Compare your qualatitive assessment of which variables were most important in each model. 
@@ -214,7 +219,7 @@ For abies: most significant relationships: elev, then tci, then stream dist
   For abies in other model: elevation, stream dist, tci. The order of importance was changed for this model
 
 Does it appear that changing the error distribution changed the results much? In what ways? 
-Changing the error distribution  affected the results of the two models (the importance of a few variables were altered between the preliminary model and the poisson model), but the poisson model fit the assumptions of the normality and residuals better. 
+Changing the error distribution affected the results of the two models (the importance of a few variables were altered between the preliminary model and the poisson model), but the poisson model fit the assumptions of the normality and residuals better. 
 
 3\. Provide a plain English summary (i.e., no statistics) of what you have
 found and what conclusions we can take away from your analysis?
@@ -226,6 +231,17 @@ These variables were found to have a significant relationship with the amount of
 exploratory models developed above. This is a very simple and not very
 robust machine learning stepwise algorithm that uses AIC to select a 
 best model. By default it does a backward selection routine. 
+```{r}
+# I used the function 'step()' earlier in my code, which produced a list of aic values I could use for comparison. I noticed on the github issues board that there may be a difference between step and stepaic. 
+
+step(abies_poi)
+
+library(MASS)
+stepAIC(abies_poi) 
+
+# both functions provide same sets of data when ran as above, but stepAIC() allows you to specify direction
+
+```
 
 5\. (optional) Develop a model for the number of species in each site 
 (i.e., unique plotID). This variable will also be discrete so the Poisson
