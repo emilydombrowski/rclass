@@ -1,0 +1,147 @@
+## Spatial Modeling Assignment
+
+```{r}
+library(vegan)
+data(BCI)
+## UTM Coordinates (in metres)
+BCI_xy = data.frame(x = rep(seq(625754, 626654, by=100), each=5), 
+                    y = rep(seq(1011569,  1011969, by=100), len=50))
+```
+
+1) Examine if there is evidence of spatial dependence in a rare and a common
+species in the BCI tree dataset
+
+```{r}
+
+bci <- colSums (BCI)
+hist(bci) # gi
+
+quantile(bci) # gives IQR information
+
+plot(density(bci)) # preliminary plot
+
+plot(density(log(bci))) # gives better plot with log transformed data
+quantile(log(bci)) 
+
+which(bci > 25 & bci < 27) # prints species names given confines
+
+rare_sp <- BCI[ , 65] # specifies columns within BCI to choose for species
+comm_sp <- BCI [ , 58]
+
+plot (BCI_xy, cex = rare_sp / max(rare_sp)) # cex specifies scaling
+plot (BCI_xy, cex=comm_sp / max(comm_sp))
+
+geod <- dist(BCI_xy)
+rared <- dist(rare_sp) # defines numbers for plots
+commd <- dist(comm_sp)
+
+par(mfrow=c(1,2)) # sets parameters to plots
+plot(geod, rared, main = 'rare species') # 
+lines(lowess(geod, rared), lwd =2, col = 'red')
+plot(geod, commd, main = 'common species')
+lines(lowess(geod, commd), lwd =2, col = 'red')
+
+
+mantel(geod, rared)
+mantel(geod, commd)
+
+# is there less spatial aggregation in the rare species? counter intuitive; rare species tend to be endemic to specific places, thus would expect more spatial depenedence than common species
+```
+
+
+2) Build two generalized linear models to predict the abundance of the species
+*Drypetes standleyi* using the abundance of other tree species in the study site.
+Specifically examine the following species as predictor variables:
+
+```{r}
+sp_ids = c("Cordia.lasiocalyx", "Hirtella.triandra",
+           "Picramnia.latifolia", "Quassia.amara",
+           "Tabernaemontana.arborea", "Trattinnickia.aspera", 
+           "Xylopia.macrantha")
+
+sp_a <- BCI$Cordia.lasiocalyx
+sp_b <- BCI$Hirtella.triandra
+sp_c <- BCI$Picramnia.latifolia
+sp_d <- BCI$Quassia.amara
+sp_e <- BCI$Tabernaemontana.arborea
+sp_f <- BCI$Trattinnickia.aspera
+sp_g <- BCI$Xylopia.macrantha
+
+```
+
+```{r}
+
+library(nlme)
+
+sp_int <- BCI$Drypetes.standleyi
+
+sp_one <- BCI$Cordia.lasiocalyx
+
+sp_lm = gls(sp_int ~ sp_one, data = BCI_xy)
+
+plot(Variogram(sp_lm, form =~ x + y))
+
+max_bci <- max(bci)/2 
+
+res = residuals(sp_lm)
+plot(dist(BCI_xy[, c('x', 'y')]), dist(res))
+lines(lowess(dist(BCI_xy[, c('x', 'y')]), dist(res)), col='red', lwd=2)
+abline(v = max_bci, col='red', lwd=3, lty=2) # abline not showing up
+
+sp_exp = update(sp_lm, corr=corExp(form=~x + y))
+plot(Variogram(sp_exp, maxDist = max_bci))
+# model doesn't fit the error
+
+plot(Variogram(sp_exp, resType='normalized', maxDist = max_bci))
+# this one looks a lot better! normalized error makes 
+
+sp_rat_nug = update(sp_lm, corr=corRatio(form=~x + y, nugget=T))
+plot(Variogram(sp_rat_nug, maxDist = max_bci))
+
+anova (sp_lm, sp_exp, sp_rat_nug, test = F)
+
+summary(sp_lm)
+summary (sp_exp)
+summary (sp_rat_nug)
+```
+
+```{r}
+
+sp_lm2 = gls(sp_int ~ sp_a + sp_b + sp_c + sp_d + sp_e + sp_f + sp_g, data = BCI_xy)
+
+plot(Variogram(sp_lm2, form =~ x + y))
+
+res2 = residuals(sp_lm2)
+plot(dist(BCI_xy[, c('x', 'y')]), dist(res2))
+lines(lowess(dist(BCI_xy[, c('x', 'y')]), dist(res2)), col='red', lwd=2)
+abline(v = max_bci, col='red', lwd=3, lty=2) # abline not showing up
+
+sp_exp2 = update(sp_lm2, corr=corExp(form=~x + y))
+plot(Variogram(sp_exp2, maxDist = max_bci))
+# model doesn't fit the error
+
+plot(Variogram(sp_exp2, resType='normalized', maxDist = max_bci))
+# this one looks a lot better! normalized error makes 
+
+sp_rat_nug2 = update(sp_lm2, corr=corRatio(form=~x + y, nugget=T))
+plot(Variogram(sp_rat_nug2, maxDist = max_bci))
+
+anova(sp_lm2, sp_exp2, sp_rat_nug2, test = F)
+
+summary(sp_lm2)
+summary (sp_exp2)
+summary (sp_rat_nug2)
+```
+
+```{r}
+Did including the spatial error term have a large impact on the coefficients
+of the model?
+# The spatial error term does not have a large impact on the coefficients. Looking the coefficients of sp_rat_nug2 compared to the other models did not show many changes. 
+
+* Did including the spatial error terms significantly improve model fit (use 
+function `anova` to carry out model comparison)?
+# The spatial error term did not significantly improve the model fit. The exponential error model fits better than both the linear model and the rational quadratic even through the rational quadratic has a nugget. 
+
+* Explain why you did or did not observe a difference in the influence of adding the spatial error term between the two models.
+# I did not observe a difference with the nugget between the models, as demonstrated by the BIC values. Species are spatially independent. One species does not have an influence on the distribution of another. 
+```
