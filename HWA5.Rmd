@@ -2,6 +2,7 @@
 
 ```{r}
 library(vegan)
+
 data(BCI)
 ## UTM Coordinates (in metres)
 BCI_xy = data.frame(x = rep(seq(625754, 626654, by=100), each=5), 
